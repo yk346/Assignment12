@@ -1,3 +1,6 @@
+DockerHub repository:
+https://hub.docker.com/repository/docker/yk346/601_module12/general
+
 # 📦 Project Setup
 
 ---
