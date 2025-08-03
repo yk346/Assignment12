@@ -182,6 +182,7 @@ def get_calculation(
         raise HTTPException(status_code=404, detail="Calculation not found.")
     return calculation
 
+"""
 # Edit / Update a Calculation
 @app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
 def update_calculation(
@@ -208,6 +209,234 @@ def update_calculation(
     db.commit()
     db.refresh(calculation)
     return calculation
+"""
+"""
+# Edit / Update a Calculation, modified to include the math operation type
+@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+def update_calculation(
+    calc_id: str,
+    calculation_update: CalculationUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        calc_uuid = UUID(calc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid calculation id format.")
+
+    calculation = db.query(Calculation).filter(
+        Calculation.id == calc_uuid,
+        Calculation.user_id == current_user.id
+    ).first()
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found.")
+
+    # Update type if provided
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type
+
+    # Update inputs if provided
+    if calculation_update.inputs is not None:
+        calculation.inputs = calculation_update.inputs
+
+    # Always recompute result if either type or inputs changed
+    if calculation_update.type is not None or calculation_update.inputs is not None:
+        calculation.result = calculation.get_result()
+
+    calculation.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(calculation)
+    return calculation
+"""
+"""
+from sqlalchemy.orm.exc import NoResultFound
+
+@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+def update_calculation(
+    calc_id: str,
+    calculation_update: CalculationUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        calc_uuid = UUID(calc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid calculation id format.")
+
+    # Fetch the calculation (initial fetch)
+    calculation = db.query(Calculation).filter(
+        Calculation.id == calc_uuid,
+        Calculation.user_id == current_user.id
+    ).first()
+
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found.")
+
+    # Update fields
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type
+
+    if calculation_update.inputs is not None:
+        calculation.inputs = calculation_update.inputs
+
+    # Commit changes to DB first, so polymorphic identity is persisted
+    db.commit()
+    db.refresh(calculation)
+
+    # Re-fetch the calculation to refresh its polymorphic Python class
+    try:
+        calculation = db.query(Calculation).filter(Calculation.id == calc_uuid).one()
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Calculation not found after update.")
+
+    # Now the Python object will be of correct subclass type (Addition, Multiplication, etc.)
+    calculation.result = calculation.get_result()
+    calculation.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(calculation)
+    return calculation
+"""
+"""
+from sqlalchemy.orm import make_transient
+
+@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+def update_calculation(
+    calc_id: str,
+    calculation_update: CalculationUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        calc_uuid = UUID(calc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid calculation id format.")
+
+    # Fetch calculation
+    calculation = db.query(Calculation).filter(
+        Calculation.id == calc_uuid,
+        Calculation.user_id == current_user.id
+    ).first()
+
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found.")
+
+    # Update fields
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type
+
+    if calculation_update.inputs is not None:
+        calculation.inputs = calculation_update.inputs
+
+    db.flush()  # Flush changes to DB without committing
+
+    # Detach the object from session & reset polymorphic identity
+    db.expunge(calculation)
+    make_transient(calculation)
+
+    # Re-attach to session, SQLAlchemy will now re-apply polymorphism
+    calculation = db.merge(calculation)
+
+    # Now the correct subclass method will be used
+    calculation.result = calculation.get_result()
+    calculation.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(calculation)
+
+    return calculation
+"""
+"""
+from app.models.calculation import Calculation
+
+@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+def update_calculation(
+    calc_id: str,
+    calculation_update: CalculationUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        calc_uuid = UUID(calc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid calculation id format.")
+
+    calculation = db.query(Calculation).filter(
+        Calculation.id == calc_uuid,
+        Calculation.user_id == current_user.id
+    ).first()
+
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found.")
+
+    # Update fields
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type
+
+    if calculation_update.inputs is not None:
+        calculation.inputs = calculation_update.inputs
+
+    # Refresh polymorphic subclass identity
+    calculation = Calculation.refresh_polymorphic(db, calculation)
+
+    # Compute result using correct method
+    calculation.result = calculation.get_result()
+    calculation.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(calculation)
+
+    return calculation
+"""
+
+@app.put("/calculations/{calc_id}", response_model=CalculationResponse, tags=["calculations"])
+def update_calculation(
+    calc_id: str,
+    calculation_update: CalculationUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        calc_uuid = UUID(calc_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid calculation id format.")
+
+    # Fetch calculation
+    calculation = db.query(Calculation).filter(
+        Calculation.id == calc_uuid,
+        Calculation.user_id == current_user.id
+    ).first()
+
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found.")
+
+    # Update fields
+    if calculation_update.type is not None:
+        calculation.type = calculation_update.type
+
+    if calculation_update.inputs is not None:
+        calculation.inputs = calculation_update.inputs
+
+    db.flush()  # Write changes to DB but don't commit yet.
+
+    # Re-fetch to ensure polymorphic identity is refreshed
+    db.expunge(calculation)
+    calculation = db.query(Calculation).get(calc_uuid)
+
+    if not calculation:
+        raise HTTPException(status_code=404, detail="Calculation not found after refresh.")
+
+    try:
+        calculation.result = calculation.get_result()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation failed: {str(e)}")
+
+    calculation.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(calculation)
+
+    return calculation
+
 
 # Delete a Calculation
 @app.delete("/calculations/{calc_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["calculations"])
@@ -235,4 +464,4 @@ def delete_calculation(
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8001, log_level="info")
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, log_level="info")

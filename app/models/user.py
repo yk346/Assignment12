@@ -8,6 +8,7 @@ from sqlalchemy.orm import relationship
 from app.core.config import get_settings
 from app.database import Base
 from app.models.calculation import Calculation
+from sqlalchemy.exc import SQLAlchemyError
 
 settings = get_settings()
 
@@ -99,45 +100,86 @@ class User(Base):
         from app.auth.jwt import get_password_hash
         return get_password_hash(password)
 
+    # @classmethod
+    # def register(cls, db, user_data: dict):
+    #     """
+    #     Register a new user.
+
+    #     Args:
+    #         db: SQLAlchemy database session
+    #         user_data: Dictionary containing user registration data
+            
+    #     Returns:
+    #         User: The newly created user instance
+            
+    #     Raises:
+    #         ValueError: If password is invalid or username/email already exists
+    #     """
+    #     password = user_data.get("password")
+    #     if not password or len(password) < 6:
+    #         raise ValueError("Password must be at least 6 characters long")
+        
+    #     # Check for duplicate email or username
+    #     existing_user = db.query(cls).filter(
+    #         or_(cls.email == user_data["email"], cls.username == user_data["username"])
+    #     ).first()
+    #     if existing_user:
+    #         raise ValueError("Username or email already exists")
+        
+    #     # Create new user instance
+    #     hashed_password = cls.hash_password(password)
+    #     user = cls(
+    #         first_name=user_data["first_name"],
+    #         last_name=user_data["last_name"],
+    #         email=user_data["email"],
+    #         username=user_data["username"],
+    #         password=hashed_password,
+    #         is_active=True,
+    #         is_verified=False
+    #     )
+    #     db.add(user)
+    #     return user
+
+
     @classmethod
     def register(cls, db, user_data: dict):
-        """
-        Register a new user.
+        try:
+            password = user_data.get("password")
+            if not password or len(password) < 6:
+                raise ValueError("Password must be at least 6 characters long")
 
-        Args:
-            db: SQLAlchemy database session
-            user_data: Dictionary containing user registration data
-            
-        Returns:
-            User: The newly created user instance
-            
-        Raises:
-            ValueError: If password is invalid or username/email already exists
-        """
-        password = user_data.get("password")
-        if not password or len(password) < 6:
-            raise ValueError("Password must be at least 6 characters long")
-        
-        # Check for duplicate email or username
-        existing_user = db.query(cls).filter(
-            or_(cls.email == user_data["email"], cls.username == user_data["username"])
-        ).first()
-        if existing_user:
-            raise ValueError("Username or email already exists")
-        
-        # Create new user instance
-        hashed_password = cls.hash_password(password)
-        user = cls(
-            first_name=user_data["first_name"],
-            last_name=user_data["last_name"],
-            email=user_data["email"],
-            username=user_data["username"],
-            password=hashed_password,
-            is_active=True,
-            is_verified=False
-        )
-        db.add(user)
-        return user
+            # Check for duplicate email or username
+            existing_user = db.query(cls).filter(
+                or_(cls.email == user_data["email"], cls.username == user_data["username"])
+            ).first()
+            if existing_user:
+                raise ValueError("Username or email already exists")
+
+            # Hash password
+            hashed_password = cls.hash_password(password)
+            if not hashed_password:
+                raise ValueError("Password hashing failed.")
+
+            # Create and add new user
+            user = cls(
+                first_name=user_data["first_name"],
+                last_name=user_data["last_name"],
+                email=user_data["email"],
+                username=user_data["username"],
+                password=hashed_password,
+                is_active=True,
+                is_verified=False
+            )
+            db.add(user)
+            db.flush()  # <-- Catch DB-level errors here
+
+            return user
+
+        except (ValueError, SQLAlchemyError) as e:
+            print(f"[User.register] Error: {e}")
+            raise
+
+
 
     @classmethod
     def authenticate(cls, db, username_or_email: str, password: str):

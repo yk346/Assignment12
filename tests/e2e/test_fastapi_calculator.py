@@ -9,12 +9,18 @@ from app.models.calculation import Calculation
 # ---------------------------------------------------------------------------
 # Helper Fixtures and Functions
 # ---------------------------------------------------------------------------
+
+#@pytest.fixture
+# def base_url(fastapi_server: str) -> str:
+#     """
+#     Returns the FastAPI server base URL without a trailing slash.
+#     """
+#     return fastapi_server.rstrip("/")
+
+
 @pytest.fixture
-def base_url(fastapi_server: str) -> str:
-    """
-    Returns the FastAPI server base URL without a trailing slash.
-    """
-    return fastapi_server.rstrip("/")
+def base_url(fastapi_server):  # <-- this will use the dynamic port from conftest.py
+    return fastapi_server
 
 def _parse_datetime(dt_str: str) -> datetime:
     """Helper function to parse datetime strings from API responses."""
@@ -56,8 +62,8 @@ def test_user_registration(base_url: str):
         "last_name": "Smith",
         "email": "alice.smith@example.com",
         "username": "alicesmith",
-        "password": "SecurePass123!",
-        "confirm_password": "SecurePass123!"
+        "password": "SecurePass123!123123",
+        "confirm_password": "SecurePass123!123123"
     }
     response = requests.post(url, json=payload)
     assert response.status_code == 201, f"Expected 201 but got {response.status_code}. Response: {response.text}"

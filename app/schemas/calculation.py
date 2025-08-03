@@ -79,8 +79,9 @@ class CalculationCreate(CalculationBase):
         }
     )
 
+"""
 class CalculationUpdate(BaseModel):
-    """Schema for updating an existing Calculation"""
+    #Schema for updating an existing Calculation
     inputs: Optional[List[float]] = Field(
         None,
         description="Updated list of numeric inputs for the calculation",
@@ -90,7 +91,7 @@ class CalculationUpdate(BaseModel):
 
     @model_validator(mode='after')
     def validate_inputs(self) -> "CalculationUpdate":
-        """Validate the inputs if they are being updated"""
+        #Validate the inputs if they are being updated
         if self.inputs is not None and len(self.inputs) < 2:
             raise ValueError("At least two numbers are required for calculation")
         return self
@@ -99,6 +100,77 @@ class CalculationUpdate(BaseModel):
         from_attributes=True,
         json_schema_extra={"example": {"inputs": [42, 7]}}
     )
+"""
+
+class CalculationUpdate(BaseModel):
+    #Schema for updating an existing Calculation
+    type: Optional[str] = Field(
+        None,
+        description="Updated operation type for the calculation",
+        example="multiplication"
+    )
+    inputs: Optional[List[float]] = Field(
+        None,
+        description="Updated list of numeric inputs for the calculation",
+        example=[42, 7],
+        min_items=2
+    )
+
+    @model_validator(mode='after')
+    def validate_inputs_and_type(self) -> "CalculationUpdate":
+        #Validate the inputs and type if they are being updated
+        allowed_types = {"addition", "subtraction", "multiplication", "division"}
+
+        if self.type is not None and self.type not in allowed_types:
+            raise ValueError(f"Invalid type '{self.type}'. Must be one of: {', '.join(allowed_types)}")
+
+        if self.inputs is not None and len(self.inputs) < 2:
+            raise ValueError("At least two numbers are required for calculation")
+
+        return self
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "type": "multiplication",
+                "inputs": [42, 7]
+            }
+        }
+    )
+"""
+# app/schemas/calculation.py
+class CalculationType(str, Enum):
+    addition = "addition"
+    subtraction = "subtraction"
+    multiplication = "multiplication"
+    division = "division"
+
+class CalculationUpdate(BaseModel):
+    type: Optional[CalculationType] = Field(
+        None,
+        description="Updated calculation type (addition, subtraction, multiplication, division)",
+        example="multiplication"
+    )
+    inputs: Optional[List[float]] = Field(
+        None,
+        description="Updated list of numeric inputs for the calculation",
+        example=[42, 7],
+        min_items=2
+    )
+
+    @model_validator(mode='after')
+    def validate_inputs(self) -> "CalculationUpdate":
+        #Validate the inputs if they are being updated
+        if self.inputs is not None and len(self.inputs) < 2:
+            raise ValueError("At least two numbers are required for calculation")
+        return self
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={"example": {"type": "division", "inputs": [100, 5]}}
+    )
+"""
 
 class CalculationResponse(CalculationBase):
     """Schema for reading a Calculation from the database"""

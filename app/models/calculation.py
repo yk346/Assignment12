@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declared_attr
 from sqlalchemy.ext.declarative import declared_attr
 from app.database import Base
+from sqlalchemy.orm import make_transient
 
 class AbstractCalculation:
     """Abstract base class for calculations"""
@@ -89,6 +90,15 @@ class AbstractCalculation:
         if not calculation_class:
             raise ValueError(f"Unsupported calculation type: {calculation_type}")
         return calculation_class(user_id=user_id, inputs=inputs)
+    
+    
+    @classmethod
+    def refresh_polymorphic(cls, db_session, obj):
+        db_session.flush()
+        db_session.expunge(obj)
+        make_transient(obj)
+        return db_session.merge(obj)
+
 
     def get_result(self) -> float:
         """Method to compute calculation result"""
