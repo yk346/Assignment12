@@ -1,6 +1,142 @@
 DockerHub repository:
 https://hub.docker.com/repository/docker/yk346/601_module12/general
 
+FastAPI Calculator - Integration Testing & Manual API Guide
+📋 Prerequisites
+Ensure you have the following installed:
+
+Python 3.12+
+
+PostgreSQL running and database created (fastapi_db)
+
+Redis running (for token blacklisting)
+
+Node.js (optional, for Playwright browsers installation)
+
+📦 Python Environment Setup
+bash
+Copy
+Edit
+# Clone repository and navigate into it
+git clone <your-repo-url>
+cd module12_is601
+
+# Setup Python Virtual Environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Install Dependencies
+pip install -r requirements.txt
+
+# Install Playwright Browsers (if not already)
+playwright install
+🧪 Running Integration Tests (E2E)
+The integration tests will:
+
+Spin up a FastAPI test server
+
+Initialize a test PostgreSQL database
+
+Mock or use Redis for JWT blacklisting
+
+Perform HTTP requests to endpoints /auth/register, /auth/login, /calculator/* etc.
+
+Run Tests:
+bash
+Copy
+Edit
+pytest -s tests/e2e/
+Optional Pytest Flags:
+--preserve-db: Prevent test database cleanup after tests.
+
+--run-slow: Run tests marked as "slow" (UI automation, etc.)
+
+Example:
+
+bash
+Copy
+Edit
+pytest -s tests/e2e/ --preserve-db --run-slow
+🐞 Debugging Test Failures (Common)
+Problem	Solution
+HTTP 500 on /auth/register	Ensure Redis is running (docker run -p 6379:6379 redis)
+PostgreSQL Connection Error	Ensure PostgreSQL is running and DATABASE_URL is correct in .env
+Playwright Errors	Run playwright install to ensure browsers are installed
+
+🌐 Manual API Testing via OpenAPI (Swagger UI)
+You can manually test the API through the Swagger UI provided by FastAPI.
+
+Steps:
+Run FastAPI Server Locally
+
+bash
+Copy
+Edit
+uvicorn app.main:app --reload
+By default, it will be available at: http://127.0.0.1:8000
+
+Access Swagger UI
+Open in browser: http://127.0.0.1:8000/docs
+
+Manual API Flow to Test:
+
+POST /auth/register: Register a new user.
+
+POST /auth/login: Get Access & Refresh Tokens.
+
+Authorize: Click "Authorize" button in Swagger UI and input:
+
+php-template
+Copy
+Edit
+Bearer <access_token>
+Perform Calculator Operations:
+
+POST /calculator/ to create a calculation.
+
+GET /calculator/ to list all calculations.
+
+PUT /calculator/{id} to update a calculation.
+
+DELETE /calculator/{id} to delete.
+
+Token Blacklisting (Optional)
+
+POST /auth/logout to blacklist a token.
+
+After logout, the access token should be invalid for protected routes.
+
+📝 .env Example Configuration
+env
+Copy
+Edit
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fastapi_db
+REDIS_URL=redis://localhost:6379/0
+JWT_SECRET_KEY=your-super-secret-key
+JWT_REFRESH_SECRET_KEY=your-refresh-secret-key
+🚀 Useful Commands
+Command	Description
+uvicorn app.main:app --reload	Run FastAPI server locally
+pytest -s tests/e2e/	Run integration tests
+docker run -p 6379:6379 redis	Run Redis locally via Docker
+playwright install	Install Playwright browsers
+
+✅ Manual Test Scenarios (Checklist)
+ User Registration (/auth/register)
+
+ User Login (/auth/login)
+
+ Token-protected access to /calculator/
+
+ Token invalidation on /auth/logout
+
+ CRUD operations on Calculator via /calculator/
+
+ Redis blacklisting functionality (if active)
+
+ 
+
 # 📦 Project Setup
 
 ---
